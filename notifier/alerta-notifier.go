@@ -7,11 +7,11 @@ import (
 )
 
 type AlertaNotifier struct {
-	Url          string
-	Schedules    map[string]string
-	Environments map[string]string
-	Nodes        map[string]string
-	Services     map[string]string
+	Url             string
+	DefaultSchedule string
+	Schedules       map[string]string
+	Nodes           map[string]string
+	Services        map[string]string
 }
 
 type AlertaNotification struct {
@@ -35,12 +35,11 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 	result := true
 
 	for _, message := range messages {
-		log.Println(message)
-		log.Println(al.Url)
+		// n := AlertaNotification()
+		spew.Dump(message)
 	}
 
 	spew.Dump(al.Schedules)
-	spew.Dump(al.Environments)
 	spew.Dump(al.Nodes)
 	spew.Dump(al.Services)
 

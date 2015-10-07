@@ -203,11 +203,11 @@ func builtinNotifiers() []notifier.Notifier {
 	}
 	if alertaConfig.Enabled {
 		alertaNotifier := &notifier.AlertaNotifier{
-			Url:          alertaConfig.Url,
-			Schedules:    alertaConfig.Schedules,
-			Environments: alertaConfig.Environments,
-			Nodes:        alertaConfig.Nodes,
-			Services:     alertaConfig.Services,
+			Url:             alertaConfig.Url,
+			DefaultSchedule: alertaConfig.DefaultSchedule,
+			Schedules:       alertaConfig.Schedules,
+			Nodes:           alertaConfig.Nodes,
+			Services:        alertaConfig.Services,
 		}
 		notifiers = append(notifiers, alertaNotifier)
 	}

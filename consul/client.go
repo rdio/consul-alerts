@@ -68,7 +68,6 @@ func (c *ConsulAlertClient) LoadConfig() {
 
 		// maps for alerta
 		schedules := make(map[string]string)
-		environments := make(map[string]string)
 		nodes := make(map[string]string)
 		services := make(map[string]string)
 
@@ -79,7 +78,6 @@ func (c *ConsulAlertClient) LoadConfig() {
 
 			// match alerta maps
 			MatchMap(schedules, `consul-alerts/config/notifiers/alerta/schedules/(.+)`, key, val)
-			MatchMap(environments, `consul-alerts/config/notifiers/alerta/routing/environments/(.+)`, key, val)
 			MatchMap(nodes, `consul-alerts/config/notifiers/alerta/routing/nodes/(.+)`, key, val)
 			MatchMap(services, `consul-alerts/config/notifiers/alerta/routing/services/(.+)`, key, val)
 
@@ -149,6 +147,8 @@ func (c *ConsulAlertClient) LoadConfig() {
 				valErr = loadCustomValue(&config.Notifiers.Alerta.Enabled, val, ConfigTypeBool)
 			case "consul-alerts/config/notifiers/alerta/url":
 				valErr = loadCustomValue(&config.Notifiers.Alerta.Url, val, ConfigTypeString)
+			case "consul-alerts/config/notifiers/alerta/default-schedule":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.DefaultSchedule, val, ConfigTypeString)
 
 			// slack notfier config
 			case "consul-alerts/config/notifiers/slack/enabled":
@@ -208,7 +208,6 @@ func (c *ConsulAlertClient) LoadConfig() {
 
 		// assign alerta maps
 		config.Notifiers.Alerta.Schedules = schedules
-		config.Notifiers.Alerta.Environments = environments
 		config.Notifiers.Alerta.Nodes = nodes
 		config.Notifiers.Alerta.Services = services
 	} else {

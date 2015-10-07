@@ -91,12 +91,12 @@ type SlackNotifierConfig struct {
 }
 
 type AlertaNotifierConfig struct {
-	Enabled      bool
-	Url          string
-	Schedules    map[string]string
-	Environments map[string]string
-	Nodes        map[string]string
-	Services     map[string]string
+	Enabled         bool
+	Url             string
+	DefaultSchedule string
+	Schedules       map[string]string
+	Nodes           map[string]string
+	Services        map[string]string
 }
 
 type PagerDutyNotifierConfig struct {
