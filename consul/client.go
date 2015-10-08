@@ -149,6 +149,8 @@ func (c *ConsulAlertClient) LoadConfig() {
 				valErr = loadCustomValue(&config.Notifiers.Alerta.Url, val, ConfigTypeString)
 			case "consul-alerts/config/notifiers/alerta/default-schedule":
 				valErr = loadCustomValue(&config.Notifiers.Alerta.DefaultSchedule, val, ConfigTypeString)
+			case "consul-alerts/config/notifiers/alerta/environment":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.Environment, val, ConfigTypeString)
 
 			// slack notfier config
 			case "consul-alerts/config/notifiers/slack/enabled":

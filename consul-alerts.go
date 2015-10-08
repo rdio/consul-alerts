@@ -205,6 +205,7 @@ func builtinNotifiers() []notifier.Notifier {
 		alertaNotifier := &notifier.AlertaNotifier{
 			Url:             alertaConfig.Url,
 			DefaultSchedule: alertaConfig.DefaultSchedule,
+			Environment:     alertaConfig.Environment,
 			Schedules:       alertaConfig.Schedules,
 			Nodes:           alertaConfig.Nodes,
 			Services:        alertaConfig.Services,

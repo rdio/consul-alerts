@@ -3,15 +3,24 @@ package notifier
 import (
 	log "github.com/AcalephStorage/consul-alerts/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 
-	"github.com/davecgh/go-spew/spew"
+	"encoding/json"
+	"net/http"
+	"bytes"
+	"fmt"
+	"io/ioutil"
 )
 
 type AlertaNotifier struct {
 	Url             string
 	DefaultSchedule string
+	Environment     string
 	Schedules       map[string]string
 	Nodes           map[string]string
 	Services        map[string]string
+}
+
+type PagerDutyKeys struct {
+	Keys []string `json:"pdkeys"`
 }
 
 type AlertaNotification struct {
@@ -20,29 +29,104 @@ type AlertaNotification struct {
 	Environment string            `json:"environment"`
 	Severity    string            `json:"severity"`
 	Status      string            `json:"status"`
-	Correlate   string            `json:"correlate"`
 	Services    []string          `json:"service"`
 	Group       string            `json:"group"`
 	Value       string            `json:"value"`
 	Text        string            `json:"text"`
-	Tags        []string          `json:"tags"`
-	Attributes  map[string]string `json:"attributes"`
+	Attributes  PagerDutyKeys     `json:"attributes"`
 	Origin      string            `json:"origin"`
 	Type        string            `json:"type"`
+}
+
+func getAlertaStatusAndSeverity(status string) (string, string) {
+	switch status {
+	case "critical": return "open", "critical"
+	case "passing": return "closed", "ok"
+	case "warning": return "open", "warning"
+	default: return "open", "warning"
+	}
 }
 
 func (al *AlertaNotifier) Notify(messages Messages) bool {
 	result := true
 
 	for _, message := range messages {
-		// n := AlertaNotification()
-		spew.Dump(message)
+		// map of schedule to pagerduty keys
+		// i.e. operations => <hash>
+		m := make(map[string]string)
+		
+		service := message.Service
+		node := message.Node
+
+		// Check if defined in services
+		if val, ok := al.Services[service]; ok {
+			if hash, ok := al.Schedules[val]; ok {
+				m[val] = hash
+				log.Println("Adding '", hash, "' for '",val, "'")
+			} else {
+				log.Println("Didn't find schedule for '", val,"'")
+			}
+		} else {
+			log.Println("Didn't find service defined")
+		}
+
+		// Check if defined in nodes
+		if val, ok := al.Nodes[node]; ok {
+			if hash, ok := al.Schedules[val]; ok {
+				m[val] = hash
+				log.Println("Adding '", hash, "' for '",val, "'")
+			} else {
+				log.Println("Didn't find schedule for '", val,"'")
+			}
+		} else {
+			log.Println("Didn't find node defined")
+		}
+
+		// Add default schedule
+		if len(m) == 0 {
+			m[al.DefaultSchedule] = al.Schedules[al.DefaultSchedule]
+		}
+
+		// convert map to array of pagerduty keys
+		a := []string{}
+		for _, v := range m {
+			a = append(a, v)
+		}
+
+		status, severity := getAlertaStatusAndSeverity(message.Status)
+
+		an := AlertaNotification{
+			Environment: al.Environment,
+			Services: []string{message.Service},
+			Resource: message.Node,
+			Event: message.Status,
+			Value: message.Status,
+			Status: status,
+			Severity: severity,
+			Attributes: PagerDutyKeys{
+				Keys: a,
+			},
+			Text: message.Output,
+			
+		}
+
+		if jsonStr, err := json.Marshal(an); err == nil {
+			fmt.Println("POSTing to:", al.Url)
+			req, err := http.NewRequest("POST", al.Url, bytes.NewBuffer(jsonStr))
+			req.Header.Set("Content-Type", "application/json")
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			defer resp.Body.Close()
+
+			fmt.Println("response Status:", resp.Status)
+			body, _ := ioutil.ReadAll(resp.Body)
+			fmt.Println("response Body:", string(body))
+		}
 	}
-
-	spew.Dump(al.Schedules)
-	spew.Dump(al.Nodes)
-	spew.Dump(al.Services)
-
 	log.Println("Alerta notification complete")
 	return result
 }

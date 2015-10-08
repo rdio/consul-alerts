@@ -94,6 +94,7 @@ type AlertaNotifierConfig struct {
 	Enabled         bool
 	Url             string
 	DefaultSchedule string
+	Environment     string
 	Schedules       map[string]string
 	Nodes           map[string]string
 	Services        map[string]string
