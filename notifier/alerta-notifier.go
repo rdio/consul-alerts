@@ -30,12 +30,9 @@ type AlertaNotification struct {
 	Severity    string            `json:"severity"`
 	Status      string            `json:"status"`
 	Services    []string          `json:"service"`
-	Group       string            `json:"group"`
 	Value       string            `json:"value"`
 	Text        string            `json:"text"`
 	Attributes  PagerDutyKeys     `json:"attributes"`
-	Origin      string            `json:"origin"`
-	Type        string            `json:"type"`
 }
 
 func getAlertaStatusAndSeverity(status string) (string, string) {
