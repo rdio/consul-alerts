@@ -3,11 +3,10 @@ package notifier
 import (
 	log "github.com/AcalephStorage/consul-alerts/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 
-	"encoding/json"
-	"net/http"
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 )
 
 type AlertaNotifier struct {
@@ -24,23 +23,35 @@ type PagerDutyKeys struct {
 }
 
 type AlertaNotification struct {
-	Resource    string            `json:"resource"`
-	Event       string            `json:"event"`
-	Environment string            `json:"environment"`
-	Severity    string            `json:"severity"`
-	Status      string            `json:"status"`
-	Services    []string          `json:"service"`
-	Value       string            `json:"value"`
-	Text        string            `json:"text"`
-	Attributes  PagerDutyKeys     `json:"attributes"`
+	Resource    string        `json:"resource"`
+	Event       string        `json:"event"`
+	Environment string        `json:"environment"`
+	Severity    string        `json:"severity"`
+	Status      string        `json:"status"`
+	Services    []string      `json:"service"`
+	Value       string        `json:"value"`
+	Text        string        `json:"text"`
+	Attributes  PagerDutyKeys `json:"attributes"`
 }
 
 func getAlertaStatusAndSeverity(status string) (string, string) {
 	switch status {
-	case "critical": return "open", "critical"
-	case "passing": return "closed", "ok"
-	case "warning": return "open", "warning"
-	default: return "open", "warning"
+	case "critical":
+		return "open", "critical"
+	case "passing":
+		return "closed", "ok"
+	case "warning":
+		return "open", "warning"
+	default:
+		return "open", "warning"
+	}
+}
+
+func (al *AlertaNotifier) ProcessSchedule(str string, src map[string]string, m map[string]string) {
+	if val, ok := src[str]; ok {
+		if hash, ok := al.Schedules[val]; ok {
+			m[val] = hash
+		}
 	}
 }
 
@@ -51,35 +62,15 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 		// map of schedule to pagerduty keys
 		// i.e. operations => <hash>
 		m := make(map[string]string)
-		
+
 		service := message.Service
 		node := message.Node
 
-		// Check if defined in services
-		if val, ok := al.Services[service]; ok {
-			if hash, ok := al.Schedules[val]; ok {
-				m[val] = hash
-				log.Println("Adding '", hash, "' for '",val, "'")
-			} else {
-				log.Println("Didn't find schedule for '", val,"'")
-			}
-		} else {
-			log.Println("Didn't find service defined")
-		}
+		// populate map
+		al.ProcessSchedule(service, al.Services, m)
+		al.ProcessSchedule(node, al.Nodes, m)
 
-		// Check if defined in nodes
-		if val, ok := al.Nodes[node]; ok {
-			if hash, ok := al.Schedules[val]; ok {
-				m[val] = hash
-				log.Println("Adding '", hash, "' for '",val, "'")
-			} else {
-				log.Println("Didn't find schedule for '", val,"'")
-			}
-		} else {
-			log.Println("Didn't find node defined")
-		}
-
-		// Add default schedule
+		// add default schedule if map is empty
 		if len(m) == 0 {
 			m[al.DefaultSchedule] = al.Schedules[al.DefaultSchedule]
 		}
@@ -90,23 +81,25 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 			a = append(a, v)
 		}
 
+		// set status and severity
 		status, severity := getAlertaStatusAndSeverity(message.Status)
 
+		// create notification
 		an := AlertaNotification{
 			Environment: al.Environment,
-			Services: []string{message.Service},
-			Resource: message.Node,
-			Event: message.Status,
-			Value: message.Status,
-			Status: status,
-			Severity: severity,
+			Services:    []string{message.Service},
+			Resource:    message.Node,
+			Event:       message.Status,
+			Value:       message.Status,
+			Status:      status,
+			Severity:    severity,
 			Attributes: PagerDutyKeys{
 				Keys: a,
 			},
 			Text: message.Output,
-			
 		}
 
+		// post to server
 		if jsonStr, err := json.Marshal(an); err == nil {
 			fmt.Println("POSTing to:", al.Url)
 			req, err := http.NewRequest("POST", al.Url, bytes.NewBuffer(jsonStr))
@@ -115,13 +108,11 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
-				panic(err)
+				fmt.Println("ERROR: ", resp.Status)
 			}
 			defer resp.Body.Close()
 
 			fmt.Println("response Status:", resp.Status)
-			body, _ := ioutil.ReadAll(resp.Body)
-			fmt.Println("response Body:", string(body))
 		}
 	}
 	log.Println("Alerta notification complete")
