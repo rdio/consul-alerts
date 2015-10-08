@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type AlertaNotifier struct {
@@ -48,9 +49,12 @@ func getAlertaStatusAndSeverity(status string) (string, string) {
 }
 
 func (al *AlertaNotifier) ProcessSchedule(str string, src map[string]string, m map[string]string) {
-	if val, ok := src[str]; ok {
-		if hash, ok := al.Schedules[val]; ok {
-			m[val] = hash
+	a := strings.Split(str, ",")
+	for _, v := range a {
+		if val, ok := src[strings.TrimSpace(v)]; ok {
+			if hash, ok := al.Schedules[val]; ok {
+				m[val] = hash
+			}
 		}
 	}
 }
