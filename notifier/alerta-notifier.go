@@ -54,6 +54,7 @@ func (al *AlertaNotifier) ProcessSchedule(str string, src map[string]string, m m
 		if val, ok := src[strings.TrimSpace(v)]; ok {
 			if hash, ok := al.Schedules[val]; ok {
 				m[val] = hash
+				fmt.Println("Adding", val, ":", hash, "to schedule")
 			}
 		}
 	}
@@ -76,7 +77,10 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 
 		// add default schedule if map is empty
 		if len(m) == 0 {
-			m[al.DefaultSchedule] = al.Schedules[al.DefaultSchedule]
+			key := al.DefaultSchedule
+			val := al.Schedules[key]
+			m[key] = val
+			fmt.Println("Adding default schedule", key, ":", val)
 		}
 
 		// convert map to array of pagerduty keys
