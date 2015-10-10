@@ -45,6 +45,7 @@ type NotifiersConfig struct {
 	Log       *LogNotifierConfig
 	Influxdb  *InfluxdbNotifierConfig
 	Slack     *SlackNotifierConfig
+	Alerta    *AlertaNotifierConfig
 	PagerDuty *PagerDutyNotifierConfig
 	HipChat   *HipChatNotifierConfig
 	OpsGenie  *OpsGenieNotifierConfig
@@ -89,6 +90,16 @@ type SlackNotifierConfig struct {
 	Detailed    bool
 }
 
+type AlertaNotifierConfig struct {
+	Enabled         bool
+	Url             string
+	DefaultSchedule string
+	Environment     string
+	Schedules       map[string]string
+	Nodes           map[string]string
+	Services        map[string]string
+}
+
 type PagerDutyNotifierConfig struct {
 	Enabled    bool
 	ServiceKey string
@@ -107,7 +118,7 @@ type HipChatNotifierConfig struct {
 type OpsGenieNotifierConfig struct {
 	Enabled     bool
 	ClusterName string
-	ApiKey   string
+	ApiKey      string
 }
 
 type Status struct {
@@ -130,6 +141,7 @@ type Consul interface {
 	LogConfig() *LogNotifierConfig
 	InfluxdbConfig() *InfluxdbNotifierConfig
 	SlackConfig() *SlackNotifierConfig
+	AlertaConfig() *AlertaNotifierConfig
 	PagerDutyConfig() *PagerDutyNotifierConfig
 	HipChatConfig() *HipChatNotifierConfig
 	OpsGenieConfig() *OpsGenieNotifierConfig
@@ -180,6 +192,10 @@ func DefaultAlertConfig() *ConsulAlertConfig {
 		ClusterName: "Consul-Alerts",
 	}
 
+	alerta := &AlertaNotifierConfig{
+		Enabled: false,
+	}
+
 	pagerduty := &PagerDutyNotifierConfig{
 		Enabled: false,
 	}
@@ -199,6 +215,7 @@ func DefaultAlertConfig() *ConsulAlertConfig {
 		Log:       log,
 		Influxdb:  influxdb,
 		Slack:     slack,
+		Alerta:    alerta,
 		PagerDuty: pagerduty,
 		HipChat:   hipchat,
 		OpsGenie:  opsgenie,

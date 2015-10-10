@@ -2,6 +2,7 @@ package consul
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -49,17 +50,39 @@ func NewClient(address, dc, aclToken string) (*ConsulAlertClient, error) {
 	return client, nil
 }
 
+func MatchMap(m map[string]string, rs string, key string, val []byte) {
+	re, err := regexp.Compile(rs)
+	res := re.FindAllStringSubmatch(key, -1)
+
+	if err == nil && len(res) > 0 {
+		k := res[0][1]
+		v := string(val)
+		m[k] = v
+	}
+}
+
 func (c *ConsulAlertClient) LoadConfig() {
 	if kvPairs, _, err := c.api.KV().List("consul-alerts/config", nil); err == nil {
 
 		config := c.config
+
+		// maps for alerta
+		schedules := make(map[string]string)
+		nodes := make(map[string]string)
+		services := make(map[string]string)
 
 		for _, kvPair := range kvPairs {
 
 			key := kvPair.Key
 			val := kvPair.Value
 
+			// match alerta maps
+			MatchMap(schedules, `consul-alerts/config/notifiers/alerta/schedules/(.+)`, key, val)
+			MatchMap(nodes, `consul-alerts/config/notifiers/alerta/routing/nodes/(.+)`, key, val)
+			MatchMap(services, `consul-alerts/config/notifiers/alerta/routing/services/(.+)`, key, val)
+
 			var valErr error
+
 			switch key {
 			// checks config
 			case "consul-alerts/config/checks/enabled":
@@ -119,6 +142,16 @@ func (c *ConsulAlertClient) LoadConfig() {
 			case "consul-alerts/config/notifiers/influxdb/series-name":
 				valErr = loadCustomValue(&config.Notifiers.Influxdb.SeriesName, val, ConfigTypeString)
 
+			// alerta notifier config
+			case "consul-alerts/config/notifiers/alerta/enabled":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.Enabled, val, ConfigTypeBool)
+			case "consul-alerts/config/notifiers/alerta/url":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.Url, val, ConfigTypeString)
+			case "consul-alerts/config/notifiers/alerta/default-schedule":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.DefaultSchedule, val, ConfigTypeString)
+			case "consul-alerts/config/notifiers/alerta/environment":
+				valErr = loadCustomValue(&config.Notifiers.Alerta.Environment, val, ConfigTypeString)
+
 			// slack notfier config
 			case "consul-alerts/config/notifiers/slack/enabled":
 				valErr = loadCustomValue(&config.Notifiers.Slack.Enabled, val, ConfigTypeBool)
@@ -174,6 +207,11 @@ func (c *ConsulAlertClient) LoadConfig() {
 			}
 
 		}
+
+		// assign alerta maps
+		config.Notifiers.Alerta.Schedules = schedules
+		config.Notifiers.Alerta.Nodes = nodes
+		config.Notifiers.Alerta.Services = services
 	} else {
 		log.Println("Unable to load custom config, using default instead:", err)
 	}
@@ -298,6 +336,10 @@ func (c *ConsulAlertClient) InfluxdbConfig() *InfluxdbNotifierConfig {
 
 func (c *ConsulAlertClient) SlackConfig() *SlackNotifierConfig {
 	return c.config.Notifiers.Slack
+}
+
+func (c *ConsulAlertClient) AlertaConfig() *AlertaNotifierConfig {
+	return c.config.Notifiers.Alerta
 }
 
 func (c *ConsulAlertClient) PagerDutyConfig() *PagerDutyNotifierConfig {
