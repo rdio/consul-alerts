@@ -97,7 +97,7 @@ func (al *AlertaNotifier) Notify(messages Messages) bool {
 			Environment: al.Environment,
 			Services:    []string{message.Service},
 			Resource:    message.Node,
-			Event:       message.Status,
+			Event:       message.Service,
 			Value:       message.Status,
 			Status:      status,
 			Severity:    severity,
